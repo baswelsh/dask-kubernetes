@@ -205,12 +205,14 @@ class KubeCluster(Cluster):
         self.scheduler_service_type = dask.config.get(
             "kubernetes.scheduler-service-type", override_with=scheduler_service_type
         )
-        self.volume_mounts = dask.config.get(
-            "kubernetes.volume-mounts", override_with=volume_mounts
-        )
-        self.volumes = dask.config.get(
-            "kubernetes.volumes", override_with=volumes
-        )
+        self.volume_mounts = volume_mounts
+        # dask.config.get(
+        #     "kubernetes.volume-mounts", override_with=volume_mounts
+        # )
+        self.volumes = volumes
+        # dask.config.get(
+        #     "kubernetes.volumes", override_with=volumes
+        # )
 
         if self._custom_cluster_spec:
             if isinstance(self._custom_cluster_spec, str):
