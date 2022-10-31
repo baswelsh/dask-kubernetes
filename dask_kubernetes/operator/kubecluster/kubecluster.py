@@ -838,8 +838,8 @@ def make_scheduler_spec(
                     ],
                     "readinessProbe": {
                         "httpGet": {"port": "http-dashboard", "path": "/health"},
-                        "initialDelaySeconds": 5,
-                        "periodSeconds": 10,
+                        "initialDelaySeconds": 1,
+                        "periodSeconds": 1,
                     },
                     "livenessProbe": {
                         "httpGet": {"port": "http-dashboard", "path": "/health"},
