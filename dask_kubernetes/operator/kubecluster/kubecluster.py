@@ -777,7 +777,8 @@ def make_worker_spec(
     if isinstance(worker_command, str):
         worker_command = worker_command.split(" ")
 
-    args = worker_command + ["--name", "$(DASK_WORKER_NAME)", "--no-dashboard"]
+    # args = worker_command + ["--name", "$(DASK_WORKER_NAME)", "--no-dashboard"]
+    args = worker_command + ["--name", "$(DASK_WORKER_NAME)"]
 
     return {
         "replicas": n_workers,
@@ -821,7 +822,8 @@ def make_scheduler_spec(
                     "name": "scheduler",
                     "image": image,
                     # "args": ["dask-scheduler", "--host", "0.0.0.0"] + (args or []), --no-dashboard --no-jupyter --no-show
-                    "args": ["dask-scheduler", "--host", "0.0.0.0", "--no-dashboard", "--no-jupyter", "--no-show"],
+                    # "args": ["dask-scheduler", "--host", "0.0.0.0", "--no-dashboard", "--no-jupyter", "--no-show"],
+                    "args": ["dask-scheduler", "--host", "0.0.0.0"],
                     "env": env,
                     "resources": resources,
                     "ports": [
