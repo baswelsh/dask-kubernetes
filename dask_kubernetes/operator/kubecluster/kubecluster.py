@@ -777,8 +777,8 @@ def make_worker_spec(
     if isinstance(worker_command, str):
         worker_command = worker_command.split(" ")
 
-    # args = worker_command + ["--name", "$(DASK_WORKER_NAME)", "--no-dashboard"]
     args = worker_command + ["--name", "$(DASK_WORKER_NAME)"]
+    _resources = resources['worker'] if 'worker' in resources else resources
 
     return {
         "replicas": n_workers,
@@ -789,7 +789,7 @@ def make_worker_spec(
                     "image": image,
                     "args": args,
                     "env": env,
-                    "resources": resources,
+                    "resources": _resources,
                     "volumeMounts": volume_mounts or [],
                 }
             ],
@@ -815,17 +815,17 @@ def make_scheduler_spec(
         # If they gave us a list, assume its a list of dicts and already ready to go
         env = env
 
+    _resources = resources['scheduler'] if 'scheduler' in resources else resources
+
     return {
         "spec": {
             "containers": [
                 {
                     "name": "scheduler",
                     "image": image,
-                    # "args": ["dask-scheduler", "--host", "0.0.0.0"] + (args or []), --no-dashboard --no-jupyter --no-show
-                    # "args": ["dask-scheduler", "--host", "0.0.0.0", "--no-dashboard", "--no-jupyter", "--no-show"],
                     "args": ["dask-scheduler", "--host", "0.0.0.0"],
                     "env": env,
-                    "resources": resources,
+                    "resources": _resources,
                     "ports": [
                         {
                             "name": "tcp-comm",
