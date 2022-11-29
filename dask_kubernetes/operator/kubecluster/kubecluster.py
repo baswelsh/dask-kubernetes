@@ -98,6 +98,10 @@ class KubeCluster(Cluster):
     custom_cluster_spec: str | dict (optional)
         Path to a YAML manifest or a dictionary representation of a ``DaskCluster`` resource object which will be
         used to create the cluster instead of generating one from the other keyword arguments.
+    volume_mounts: List[dict] (optional)
+        TODO
+    volumes: List[dict] (optional)
+        TODO
     **kwargs: dict
         Additional keyword arguments to pass to LocalCluster
 
@@ -153,6 +157,8 @@ class KubeCluster(Cluster):
         resource_timeout=None,
         scheduler_service_type=None,
         custom_cluster_spec=None,
+        volume_mounts=None,
+        volumes=None,
         **kwargs,
     ):
 
@@ -196,6 +202,14 @@ class KubeCluster(Cluster):
         self.scheduler_service_type = dask.config.get(
             "kubernetes.scheduler-service-type", override_with=scheduler_service_type
         )
+        self.volume_mounts = volume_mounts
+        # dask.config.get(
+        #     "kubernetes.volume-mounts", override_with=volume_mounts
+        # )
+        self.volumes = volumes
+        # dask.config.get(
+        #     "kubernetes.volumes", override_with=volumes
+        # )
 
         if self._custom_cluster_spec:
             if isinstance(self._custom_cluster_spec, str):
@@ -257,6 +271,8 @@ class KubeCluster(Cluster):
                     n_workers=self.n_workers,
                     image=self.image,
                     scheduler_service_type=self.scheduler_service_type,
+                    volume_mounts=self.volume_mounts,
+                    volumes=self.volumes,
                 )
             else:
                 data = self._custom_cluster_spec
@@ -434,6 +450,8 @@ class KubeCluster(Cluster):
         worker_command=None,
         env=None,
         custom_spec=None,
+        volume_mounts=None,
+        volumes=None,
     ):
         """Create a dask worker group by name
 
@@ -470,6 +488,8 @@ class KubeCluster(Cluster):
             worker_command=worker_command,
             env=env,
             custom_spec=custom_spec,
+            volume_mounts=volume_mounts,
+            volumes=volumes,
         )
 
     async def _add_worker_group(
@@ -481,6 +501,8 @@ class KubeCluster(Cluster):
         worker_command=None,
         env=None,
         custom_spec=None,
+        volume_mounts=None,
+        volumes=None,
     ):
         if custom_spec is not None:
             spec = custom_spec
@@ -491,6 +513,8 @@ class KubeCluster(Cluster):
                 worker_command=worker_command or self.worker_command,
                 n_workers=n_workers or self.n_workers,
                 image=image or self.image,
+                volume_mounts=volume_mounts or self.volume_mounts,
+                volumes=volumes or self.volumes,
             )
             spec["cluster"] = self.name
         data = {
@@ -690,6 +714,8 @@ def make_cluster_spec(
     env=None,
     worker_command="dask-worker",
     scheduler_service_type="ClusterIP",
+    volume_mounts=None,
+    volumes=None,
 ):
     """Generate a ``DaskCluster`` kubernetes resource.
 
@@ -721,6 +747,8 @@ def make_cluster_spec(
                 worker_command=worker_command,
                 n_workers=n_workers,
                 image=image,
+                volume_mounts=volume_mounts,
+                volumes=volumes,
             ),
             "scheduler": make_scheduler_spec(
                 cluster_name=name,
@@ -728,6 +756,8 @@ def make_cluster_spec(
                 resources=resources,
                 image=image,
                 scheduler_service_type=scheduler_service_type,
+                volume_mounts=volume_mounts,
+                volumes=volumes,
             ),
         },
     }
@@ -739,6 +769,8 @@ def make_worker_spec(
     resources=None,
     env=None,
     worker_command="dask-worker",
+    volume_mounts=None,
+    volumes=None,
 ):
     if isinstance(env, dict):
         env = [{"name": key, "value": value} for key, value in env.items()]
@@ -750,6 +782,7 @@ def make_worker_spec(
         worker_command = worker_command.split(" ")
 
     args = worker_command + ["--name", "$(DASK_WORKER_NAME)"]
+    _resources = resources['worker'] if 'worker' in resources else resources
 
     return {
         "replicas": n_workers,
@@ -760,9 +793,11 @@ def make_worker_spec(
                     "image": image,
                     "args": args,
                     "env": env,
-                    "resources": resources,
+                    "resources": _resources,
+                    "volumeMounts": volume_mounts or [],
                 }
-            ]
+            ],
+            "volumes": volumes or [],
         },
     }
 
@@ -773,6 +808,8 @@ def make_scheduler_spec(
     resources=None,
     image="ghcr.io/dask/dask:latest",
     scheduler_service_type="ClusterIP",
+    volume_mounts=None,
+    volumes=None,
 ):
     # TODO: Take the values provided in the current class constructor
     # and build a DaskWorker compatible dict
@@ -782,6 +819,8 @@ def make_scheduler_spec(
         # If they gave us a list, assume its a list of dicts and already ready to go
         env = env
 
+    _resources = resources['scheduler'] if 'scheduler' in resources else resources
+
     return {
         "spec": {
             "containers": [
@@ -790,7 +829,7 @@ def make_scheduler_spec(
                     "image": image,
                     "args": ["dask-scheduler", "--host", "0.0.0.0"],
                     "env": env,
-                    "resources": resources,
+                    "resources": _resources,
                     "ports": [
                         {
                             "name": "tcp-comm",
@@ -805,16 +844,18 @@ def make_scheduler_spec(
                     ],
                     "readinessProbe": {
                         "httpGet": {"port": "http-dashboard", "path": "/health"},
-                        "initialDelaySeconds": 5,
-                        "periodSeconds": 10,
+                        "initialDelaySeconds": 1,
+                        "periodSeconds": 1,
                     },
                     "livenessProbe": {
                         "httpGet": {"port": "http-dashboard", "path": "/health"},
                         "initialDelaySeconds": 15,
                         "periodSeconds": 20,
                     },
+                    "volumeMounts": volume_mounts or [],
                 }
-            ]
+            ],
+            "volumes": volumes or [],
         },
         "service": {
             "type": scheduler_service_type,
