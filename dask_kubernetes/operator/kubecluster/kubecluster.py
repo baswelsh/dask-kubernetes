@@ -163,6 +163,7 @@ class KubeCluster(Cluster):
         volume_mounts=None,
         volumes=None,
         imagePullSecrets=None,
+        securityContext=None,
         **kwargs,
     ):
 
@@ -217,6 +218,10 @@ class KubeCluster(Cluster):
         self.imagePullSecrets = imagePullSecrets
         # dask.config.get(
         #     "kubernetes.imagePullSecrets", override_with=imagePullSecrets
+        # )
+        self.securityContext = securityContext
+        # dask.config.get(
+        #     "kubernetes.securityContext", override_with=securityContext
         # )
 
         if self._custom_cluster_spec:
@@ -282,6 +287,7 @@ class KubeCluster(Cluster):
                     volume_mounts=self.volume_mounts,
                     volumes=self.volumes,
                     imagePullSecrets=self.imagePullSecrets,
+                    securityContext=self.securityContext,
                 )
             else:
                 data = self._custom_cluster_spec
@@ -506,6 +512,7 @@ class KubeCluster(Cluster):
         volume_mounts=None,
         volumes=None,
         imagePullSecrets=None,
+        securityContext=None,
     ):
         if custom_spec is not None:
             spec = custom_spec
@@ -519,6 +526,7 @@ class KubeCluster(Cluster):
                 volume_mounts=volume_mounts or self.volume_mounts,
                 volumes=volumes or self.volumes,
                 imagePullSecrets=imagePullSecrets or self.imagePullSecrets,
+                securityContext=securityContext or self.securityContext,
             )
             spec["cluster"] = self.name
         data = {
@@ -721,6 +729,7 @@ def make_cluster_spec(
     volume_mounts=None,
     volumes=None,
     imagePullSecrets=None,
+    securityContext=None,
 ):
     """Generate a ``DaskCluster`` kubernetes resource.
 
@@ -755,6 +764,7 @@ def make_cluster_spec(
                 volume_mounts=volume_mounts,
                 volumes=volumes,
                 imagePullSecrets=imagePullSecrets,
+                securityContext=securityContext,
             ),
             "scheduler": make_scheduler_spec(
                 cluster_name=name,
@@ -765,6 +775,7 @@ def make_cluster_spec(
                 volume_mounts=volume_mounts,
                 volumes=volumes,
                 imagePullSecrets=imagePullSecrets,
+                securityContext=securityContext,
             ),
         },
     }
@@ -779,6 +790,7 @@ def make_worker_spec(
     volume_mounts=None,
     volumes=None,
     imagePullSecrets=None,
+    securityContext=None,
 ):
     if isinstance(env, dict):
         env = [{"name": key, "value": value} for key, value in env.items()]
@@ -803,6 +815,7 @@ def make_worker_spec(
                     "env": env,
                     "resources": _resources,
                     "volumeMounts": volume_mounts or [],
+                    "securityContext": securityContext or {},
                 }
             ],
             "imagePullSecrets": imagePullSecrets or [],
@@ -820,6 +833,7 @@ def make_scheduler_spec(
     volume_mounts=None,
     volumes=None,
     imagePullSecrets=None,
+    securityContext=None,
 ):
     # TODO: Take the values provided in the current class constructor
     # and build a DaskWorker compatible dict
@@ -863,6 +877,7 @@ def make_scheduler_spec(
                         "periodSeconds": 20,
                     },
                     "volumeMounts": volume_mounts or [],
+                    "securityContext": securityContext or {},
                 }
             ],
             "imagePullSecrets": imagePullSecrets or [],
